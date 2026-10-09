@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Sentimen Abu Vulkanik Anak Krakatau</title>
+    
+    <!-- Memuat Tailwind CSS untuk styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Memuat Chart.js untuk grafik visualisasi data -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Memuat FontAwesome untuk ikon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        volcano: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbar untuk tampilan yang lebih rapi */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-volcano-700 to-orange-600 text-white shadow-lg relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="mb-4 md:mb-0 text-center md:text-left">
+                    <h1 class="text-3xl font-bold tracking-tight mb-2">
+                        <i class="fa-solid fa-volcano mr-2"></i> Sentimen Masyarakat
+                    </h1>
+                    <p class="text-volcano-100 text-sm md:text-base">
+                        Analisis Opini Publik terhadap Dampak Abu Vulkanik Anak Krakatau
+                    </p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/30 flex items-center shadow-inner text-sm">
+                    <span class="w-2 h-2 rounded-full bg-green-400 mr-2 animate-pulse"></span>
+                    Live Data Monitor
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+        
+        <!-- API Status Notice -->
+        <div id="api-status" class="hidden mb-6 rounded-lg p-4 text-sm flex items-start fade-in shadow-sm border">
+            <i id="api-status-icon" class="fas mt-0.5 mr-3 text-lg"></i>
+            <div>
+                <p id="api-status-title" class="font-bold"></p>
+                <p id="api-status-msg" class="mt-1"></p>
+            </div>
+        </div>
+
+        <!-- Dashboard Summary Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 fade-in">
+            <!-- Chart Card -->
+            <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 lg:col-span-1 flex flex-col justify-center items-center">
+                <h2 class="text-lg font-semibold text-slate-700 w-full mb-4 flex items-center">
+                    <i class="fa-solid fa-chart-pie text-volcano-500 mr-2"></i> Distribusi Sentimen
+                </h2>
+                <div class="relative w-full max-w-[200px] aspect-square">
+                    <canvas id="sentimentChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <!-- Total Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-slate-100 flex flex-col justify-center relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <p class="text-sm text-slate-500 font-medium mb-1 z-10">Total Data Diambil</p>
+                    <div class="flex items-end gap-3 z-10">
+                        <span id="stat-total" class="text-4xl font-bold text-slate-800">0</span>
+                        <span class="text-sm text-slate-400 mb-1">postingan</span>
+                    </div>
+                </div>
+                
+                <!-- Negative Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-red-50 flex flex-col justify-center relative overflow-hidden group">
+                    <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <p class="text-sm text-red-600 font-medium mb-1 z-10 flex items-center">
+                        <i class="fa-solid fa-arrow-trend-down mr-1"></i> Sentimen Negatif
+                    </p>
+                    <div class="flex items-end gap-3 z-10">
+                        <span id="stat-negative" class="text-4xl font-bold text-red-600">0</span>
+                    </div>
+                </div>
+
+                <!-- Positive/Neutral Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-md border border-green-50 flex flex-col justify-center relative overflow-hidden group">
+                     <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full opacity-50 group-hover:scale-110 transition-transform"></div>
+                    <p class="text-sm text-green-600 font-medium mb-1 z-10 flex items-center">
+                        <i class="fa-solid fa-heart mr-1"></i> Sentimen Positif
+                    </p>
+                    <div class="flex items-end gap-3 z-10">
+                        <span id="stat-positive" class="text-4xl font-bold text-green-600">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Feed Section -->
+        <div>
+            <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+                <i class="fa-solid fa-comments text-volcano-500 mr-2"></i> Detail Data Publik (Top 8)
+            </h2>
+            
+            <!-- Loading Skeleton -->
+            <div id="loading-skeleton" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Skeleton items injected via JS -->
+            </div>
+
+            <!-- Feed Grid -->
+            <div id="data-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 hidden">
+                <!-- Data cards will be injected here via JS -->
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-800 text-slate-400 py-6 text-center text-sm mt-auto">
+        <p>&copy; 2026 Dashboard Sentimen Masyarakat - Demo Apify Data</p>
+    </footer>
+
+    <script>
+        // URL API dari pengguna (Merupakan webhook url, mungkin tidak menghasilkan array data langsung)
+        const USER_API_URL = 'https://api.apify.com/v2/webhooks?token=apify_api_E6fF7n1mCJAYAF5LbQjxqIQB3dySrx2VWnDb';
+
+        // Data Simulasi (Fallback) jika webhook API gagal mengembalikan dataset
+        const MOCK_DATA = [
+            { id: 1, author: "@warga_banten", text: "Jendela kamar penuh debu hitam pagi ini. Abu vulkanik Anak Krakatau sampai juga di pesisir. Waspada teman-teman dan selalu pakai masker saat keluar! 😷", sentiment: "negative", date: "Hari ini, 07:15 WIB" },
+            { id: 2, author: "@bencana_info", text: "Update terkini: arah angin membawa debu vulkanik ke arah barat daya. Tingkat bahaya masih dalam batas pantauan wajar.", sentiment: "neutral", date: "Hari ini, 06:30 WIB" },
+            { id: 3, author: "@relawan_kesehatan", text: "Pemerintah daerah sangat cepat membagikan masker dan vitamin ke warga terdampak abu vulkanik. Terima kasih untuk respon cepatnya! 🙏", sentiment: "positive", date: "Hari ini, 08:00 WIB" },
+            { id: 4, author: "@rider_harian", text: "Hati-hati buat yang bawa motor, jalanan licin banget dan jarak pandang terbatas karena tertutup abu vulkanik Krakatau. Bahaya bgt.", sentiment: "negative", date: "Kemarin, 19:45 WIB" },
+            { id: 5, author: "@pecinta_alam", text: "Keren banget lihat foto-foto kilat vulkanik dan erupsi Anak Krakatau dari citra satelit, alam memang selalu punya cara menakjubkan meski menakutkan.", sentiment: "positive", date: "Kemarin, 21:10 WIB" },
+            { id: 6, author: "@ibunda_raya", text: "Anak saya napasnya mulai sesak gara-gara menghirup abu vulkanik dari semalam. Tolong dong info puskesmas terdekat yang buka 24 jam.", sentiment: "negative", date: "Kemarin, 23:20 WIB" },
+            { id: 7, author: "@pemuda_siaga", text: "Mari kita tetap tenang dan jangan panik menyebarkan hoax. Pantau terus informasi resmi dari BMKG terkait sebaran abu Anak Krakatau.", sentiment: "neutral", date: "Hari ini, 05:55 WIB" },
+            { id: 8, author: "@warung_pesisir", text: "Alhamdulillah jualan tetap lancar meski harus tutup terpal supaya makanan tidak kena debu abu vulkanik. Semoga musibah cepat berlalu.", sentiment: "positive", date: "Hari ini, 09:12 WIB" }
+        ];
+
+        let chartInstance = null;
+
+        // Tampilkan loading skeleton
+        function showLoading() {
+            const skeletonContainer = document.getElementById('loading-skeleton');
+            skeletonContainer.innerHTML = '';
+            for (let i = 0; i < 8; i++) {
+                skeletonContainer.innerHTML += `
+                    <div class="bg-white rounded-xl p-5 shadow-sm border border-slate-100 animate-pulse">
+                        <div class="flex items-center space-x-3 mb-4">
+                            <div class="rounded-full bg-slate-200 h-10 w-10"></div>
+                            <div class="flex-1 space-y-2">
+                                <div class="h-3 bg-slate-200 rounded w-1/2"></div>
+                                <div class="h-2 bg-slate-200 rounded w-1/3"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="h-2 bg-slate-200 rounded w-full"></div>
+                            <div class="h-2 bg-slate-200 rounded w-full"></div>
+                            <div class="h-2 bg-slate-200 rounded w-4/5"></div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        async function fetchApifyData() {
+            showLoading();
+            
+            try {
+                // Mencoba mengambil data dari URL yang diberikan user
+                const response = await fetch(USER_API_URL);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
+                const data = await response.json();
+                
+                // Normalisasi struktur data Apify
+                let items = [];
+                if (Array.isArray(data)) {
+                    items = data;
+                } else if (data.items && Array.isArray(data.items)) {
+                    items = data.items;
+                } else if (data.data && Array.isArray(data.data)) {
+                    items = data.data;
+                } else {
+                    throw new Error('Format respon API bukan sebuah array dataset yang valid.');
+                }
+
+                if (items.length === 0) {
+                     throw new Error('Dataset API kosong.');
+                }
+
+                // Normalisasi isi item untuk memastikan memiliki atribut yang dibutuhkan untuk UI
+                const normalizedItems = items.slice(0, 8).map((item, index) => {
+                    // Coba mencari field teks
+                    const text = item.text || item.full_text || item.tweet || item.content || JSON.stringify(item).substring(0, 100);
+                    // Coba mencari author
+                    const author = item.author || item.username || item.user || `User_${index+1}`;
+                    // Coba mencari sentimen, jika tidak ada, beri nilai random atau ekstrak dari teks secara kasar
+                    let sentiment = item.sentiment || 'neutral';
+                    if (!item.sentiment) {
+                        const txtLower = text.toLowerCase();
+                        if (txtLower.includes('bahaya') || txtLower.includes('sesak') || txtLower.includes('waspada') || txtLower.includes('buruk')) sentiment = 'negative';
+                        else if (txtLower.includes('aman') || txtLower.includes('cepat') || txtLower.includes('keren') || txtLower.includes('terima kasih')) sentiment = 'positive';
+                    }
+
+                    return {
+                        id: item.id || index,
+                        author: author.startsWith('@') ? author : `@${author}`,
+                        text: text,
+                        sentiment: sentiment.toLowerCase(),
+                        date: item.date || item.created_at || 'Baru saja'
+                    };
+                });
+
+                showApiStatus('success', 'Data Berhasil Dimuat', 'Berhasil mengambil data dari Apify Endpoint Anda.');
+                renderDashboard(normalizedItems);
+
+            } catch (error) {
+                console.warn('Gagal memuat data dari API. Beralih ke data simulasi.', error);
+                
+                // Menampilkan Notifikasi Fallback
+                showApiStatus('warning', 'Fallback Data Aktif', 
+                    'URL webhook Anda tidak mengembalikan array data yang bisa dibaca. Sistem otomatis menampilkan 8 data simulasi (Mock Data) untuk mendemonstrasikan tampilan dashboard.');
+                
+                // Simulasi delay loading sedikit agar skeleton terlihat natural
+                setTimeout(() => {
+                    renderDashboard(MOCK_DATA);
+                }, 800);
+            }
+        }
+
+        function showApiStatus(type, title, message) {
+            const statusDiv = document.getElementById('api-status');
+            const icon = document.getElementById('api-status-icon');
+            const titleEl = document.getElementById('api-status-title');
+            const msgEl = document.getElementById('api-status-msg');
+
+            statusDiv.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'border-green-200', 'bg-yellow-50', 'text-yellow-800', 'border-yellow-200');
+            icon.className = 'fas mt-0.5 mr-3 text-lg';
+
+            if (type === 'success') {
+                statusDiv.classList.add('bg-green-50', 'text-green-800', 'border-green-200');
+                icon.classList.add('fa-check-circle');
+            } else {
+                statusDiv.classList.add('bg-yellow-50', 'text-yellow-800', 'border-yellow-200');
+                icon.classList.add('fa-exclamation-triangle');
+            }
+
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+        }
+
+        function renderDashboard(data) {
+            document.getElementById('loading-skeleton').classList.add('hidden');
+            const grid = document.getElementById('data-grid');
+            grid.classList.remove('hidden');
+            grid.innerHTML = '';
+
+            let counts = { positive: 0, negative: 0, neutral: 0 };
+
+            data.forEach((item, index) => {
+                // Hitung statistik
+                const sent = item.sentiment;
+                if (sent.includes('pos')) counts.positive++;
+                else if (sent.includes('neg')) counts.negative++;
+                else counts.neutral++;
+
+                // Konfigurasi visual berdasarkan sentimen
+                let badgeColor = 'bg-gray-100 text-gray-700 border-gray-200';
+                let iconStr = '<i class="fa-solid fa-minus text-gray-500 mr-1"></i> Netral';
+                let borderColor = 'border-slate-100 hover:border-gray-300';
+                
+                if (sent.includes('pos')) {
+                    badgeColor = 'bg-green-50 text-green-700 border-green-200';
+                    iconStr = '<i class="fa-solid fa-face-smile text-green-500 mr-1"></i> Positif';
+                    borderColor = 'border-slate-100 hover:border-green-300';
+                } else if (sent.includes('neg')) {
+                    badgeColor = 'bg-red-50 text-red-700 border-red-200';
+                    iconStr = '<i class="fa-solid fa-face-frown text-red-500 mr-1"></i> Negatif';
+                    borderColor = 'border-slate-100 hover:border-red-300';
+                }
+
+                // Buat kartu elemen
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-xl p-5 shadow-sm border ${borderColor} transition-all duration-300 hover:shadow-md flex flex-col h-full fade-in`;
+                card.style.animationDelay = `${index * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold text-xs shadow-inner">
+                                ${item.author.charAt(1).toUpperCase()}
+                            </div>
+                            <span class="font-semibold text-sm text-slate-700">${item.author}</span>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full border ${badgeColor}">
+                            ${iconStr}
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-4 flex-grow leading-relaxed">
+                        "${item.text}"
+                    </p>
+                    <div class="text-xs text-slate-400 mt-auto pt-3 border-t border-slate-50 flex items-center">
+                        <i class="fa-regular fa-clock mr-1"></i> ${item.date}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+
+            // Update Statistik Teks
+            document.getElementById('stat-total').textContent = data.length;
+            document.getElementById('stat-negative').textContent = counts.negative;
+            document.getElementById('stat-positive').textContent = counts.positive;
+
+            // Render Chart
+            renderChart(counts);
+        }
+
+        function renderChart(counts) {
+            const ctx = document.getElementById('sentimentChart').getContext('2d');
+            
+            // Hapus chart lama jika ada agar tidak tumpang tindih saat re-render
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const chartData = {
+                labels: ['Positif', 'Negatif', 'Netral'],
+                datasets: [{
+                    data: [counts.positive, counts.negative, counts.neutral],
+                    backgroundColor: [
+                        '#22c55e', // green-500
+                        '#ef4444', // red-500
+                        '#94a3b8'  // slate-400
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            };
+
+            const config = {
+                type: 'doughnut',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20,
+                                usePointStyle: true,
+                                font: {
+                                    family: "'Inter', sans-serif",
+                                    size: 11
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true
+                    }
+                }
+            };
+
+            chartInstance = new Chart(ctx, config);
+        }
+
+        // Mulai aplikasi setelah halaman dimuat
+        window.addEventListener('DOMContentLoaded', fetchApifyData);
+
+    </script>
+</body>
+</html>
